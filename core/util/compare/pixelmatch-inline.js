@@ -1,7 +1,7 @@
 const { PNG } = require('pngjs');
 const pixelmatch = require('pixelmatch');
 
-function resizePng (png, targetWidth, targetHeight) {
+function resizePng(png, targetWidth, targetHeight) {
   if (png.width === targetWidth && png.height === targetHeight) {
     return png;
   }
@@ -10,7 +10,7 @@ function resizePng (png, targetWidth, targetHeight) {
   return resized;
 }
 
-function compareBuffers (buf1, buf2, options) {
+function compareBuffers(buf1, buf2, options) {
   options = options || {};
   const img1 = PNG.sync.read(buf1);
   const img2 = PNG.sync.read(buf2);
@@ -26,7 +26,7 @@ function compareBuffers (buf1, buf2, options) {
   const numDiffPixels = pixelmatch(
     resized1.data, resized2.data, diff.data,
     width, height,
-    { threshold: options.threshold || 0.1 }
+    { threshold: options.threshold ?? 0.1 }
   );
 
   const totalPixels = width * height;
@@ -46,7 +46,7 @@ function compareBuffers (buf1, buf2, options) {
   };
 }
 
-function createCompositeImage (pngImages) {
+function createCompositeImage(pngImages) {
   // pngImages: array of PNG objects to place side-by-side
   const totalWidth = pngImages.reduce(function (sum, img) { return sum + img.width; }, 0);
   const maxHeight = pngImages.reduce(function (max, img) { return Math.max(max, img.height); }, 0);
