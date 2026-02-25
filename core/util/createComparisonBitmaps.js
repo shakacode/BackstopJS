@@ -114,7 +114,7 @@ function delegateCompareScenarios (config) {
     if (_.has(scenario, 'variants')) {
       scenario.variants.forEach(function (variant) {
         variant._parent = scenario;
-        scenarios.push(scenario);
+        scenarios.push(variant);
       });
     }
   });
