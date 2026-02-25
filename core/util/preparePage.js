@@ -38,9 +38,11 @@ async function preparePage (page, url, scenario, viewport, config, isReference, 
   const readyEvent = scenario.readyEvent || config.readyEvent;
   const readyTimeout = scenario.readyTimeout || config.readyTimeout || 30000;
   let readyPromise;
+  let readyResolve;
+  let readyTimeoutTimer;
+  let onConsole;
+
   if (readyEvent) {
-    let readyResolve;
-    let readyTimeoutTimer;
     readyPromise = new Promise(function (resolve) {
       readyResolve = resolve;
       readyTimeoutTimer = setTimeout(function () {
@@ -50,7 +52,7 @@ async function preparePage (page, url, scenario, viewport, config, isReference, 
       }, readyTimeout);
     });
 
-    var onConsole = function (msg) {
+    onConsole = function (msg) {
       if (new RegExp(readyEvent).test(msg.text())) {
         clearTimeout(readyTimeoutTimer);
         page.removeListener('console', onConsole);
@@ -60,14 +62,22 @@ async function preparePage (page, url, scenario, viewport, config, isReference, 
     page.on('console', onConsole);
   }
 
-  // --- OPEN URL ---
-  await page.goto(translateUrl(url), gotoParameters);
-  await injectBackstopTools(page);
+  // --- OPEN URL + WAIT FOR READY EVENT ---
+  try {
+    await page.goto(translateUrl(url), gotoParameters);
+    await injectBackstopTools(page);
 
-  // --- WAIT FOR READY EVENT ---
-  if (readyPromise) {
-    await page.evaluate(function (v) { window._readyEvent = v; }, readyEvent);
-    await readyPromise;
+    if (readyPromise) {
+      await page.evaluate(function (v) { window._readyEvent = v; }, readyEvent);
+      await readyPromise;
+    }
+  } finally {
+    if (readyTimeoutTimer) {
+      clearTimeout(readyTimeoutTimer);
+    }
+    if (onConsole) {
+      page.removeListener('console', onConsole);
+    }
   }
 
   // --- WAIT FOR SELECTOR ---
