@@ -66,7 +66,7 @@ async function preparePage (page, url, scenario, viewport, config, isReference, 
 
   // --- WAIT FOR READY EVENT ---
   if (readyPromise) {
-    await page.evaluate('window._readyEvent = \'' + readyEvent + '\'');
+    await page.evaluate(function (v) { window._readyEvent = v; }, readyEvent);
     await readyPromise;
   }
 
@@ -127,16 +127,16 @@ async function preparePage (page, url, scenario, viewport, config, isReference, 
   }
 
   // --- EXPAND SELECTORS ---
-  await page.evaluate('window._selectorExpansion = \'' + scenario.selectorExpansion + '\'');
-  await page.evaluate('window._backstopSelectors = \'' + scenario.selectors + '\'');
-  const result = await page.evaluate(function () {
-    if (window._selectorExpansion.toString() === 'true') {
-      window._backstopSelectorsExp = window._backstopTools.expandSelectors(window._backstopSelectors);
+  const selectorExpansion = scenario.selectorExpansion === true || scenario.selectorExpansion === 'true';
+  const selectors = Array.isArray(scenario.selectors) ? scenario.selectors : [scenario.selectors];
+
+  const result = await page.evaluate(function (expand, sels) {
+    window._selectorExpansion = expand;
+    window._backstopSelectors = sels;
+    if (expand) {
+      window._backstopSelectorsExp = window._backstopTools.expandSelectors(sels);
     } else {
-      window._backstopSelectorsExp = window._backstopSelectors;
-    }
-    if (!Array.isArray(window._backstopSelectorsExp)) {
-      window._backstopSelectorsExp = window._backstopSelectorsExp.split(',');
+      window._backstopSelectorsExp = sels;
     }
     window._backstopSelectorsExpMap = window._backstopSelectorsExp.reduce(function (acc, selector) {
       acc[selector] = {
@@ -149,7 +149,7 @@ async function preparePage (page, url, scenario, viewport, config, isReference, 
       backstopSelectorsExp: window._backstopSelectorsExp,
       backstopSelectorsExpMap: window._backstopSelectorsExpMap
     };
-  });
+  }, selectorExpansion, selectors);
 
   return result;
 }
