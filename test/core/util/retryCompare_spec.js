@@ -11,11 +11,11 @@ const REF_IMG2 = path.join(__dirname, 'compare/refImage-2.png');
 const retryCompare = require('../../../core/util/retryCompare');
 
 // Mock preparePage — no-op, avoids real browser navigation in unit tests
-const mockPreparePage = async function () {};
+const mockPreparePage = async function () { };
 
 // Mock page with no-op setViewport (needed for viewport reset in retry loop)
-function createMockPage (props) {
-  return Object.assign({ setViewport: async function () {} }, props);
+function createMockPage(props) {
+  return Object.assign({ setViewport: async function () { } }, props);
 }
 
 describe('retryCompare', function () {
@@ -436,6 +436,75 @@ describe('retryCompare', function () {
       assert.strictEqual(call.width, 800, 'Viewport width should be reset to 800');
       assert.strictEqual(call.height, 600, 'Viewport height should be reset to 600');
     });
+  });
+
+  it('should use pixelmatchThreshold option when comparing', async function () {
+    // Create two images with a subtle color difference.
+    // With a lenient threshold (0.5) pixelmatch considers them matching.
+    // With a strict threshold (0.01) pixelmatch flags them as different.
+    const imgA = new PNG({ width: 10, height: 10 });
+    const imgB = new PNG({ width: 10, height: 10 });
+    for (let i = 0; i < imgA.data.length; i += 4) {
+      imgA.data[i] = 100; imgA.data[i + 1] = 100; imgA.data[i + 2] = 100; imgA.data[i + 3] = 255;
+      imgB.data[i] = 110; imgB.data[i + 1] = 100; imgB.data[i + 2] = 100; imgB.data[i + 3] = 255;
+    }
+    const bufA = PNG.sync.write(imgA);
+    const bufB = PNG.sync.write(imgB);
+
+    const captureScreenshot = async () => bufA;
+
+    // Lenient threshold — subtle difference should pass
+    const lenientResult = await retryCompare({
+      captureScreenshot,
+      preparePage: mockPreparePage,
+      refPage: createMockPage(),
+      testPage: createMockPage(),
+      selector: 'body',
+      selectorMap: {},
+      viewport: { width: 800, height: 600 },
+      config: { ...baseConfig, compareRetries: 1, compareRetryDelay: 10 },
+      scenario: baseScenario,
+      initialRefBuffer: bufA,
+      initialTestBuffer: bufB,
+      refBrowserOrContext: {},
+      testBrowserOrContext: {},
+      engineScriptsPath: '',
+      pixelmatchThreshold: 0.5
+    });
+
+    assert.strictEqual(lenientResult.pass, true, 'Should pass with lenient pixelmatch threshold');
+
+    // Strict threshold — every capture returns a unique subtly-different image,
+    // so no pair ever matches at threshold 0.01
+    let strictCallCount = 0;
+    const strictCapture = async () => {
+      strictCallCount++;
+      const img = new PNG({ width: 10, height: 10 });
+      for (let i = 0; i < img.data.length; i += 4) {
+        img.data[i] = 100 + strictCallCount * 10; img.data[i + 1] = 100; img.data[i + 2] = 100; img.data[i + 3] = 255;
+      }
+      return PNG.sync.write(img);
+    };
+
+    const strictResult = await retryCompare({
+      captureScreenshot: strictCapture,
+      preparePage: mockPreparePage,
+      refPage: createMockPage(),
+      testPage: createMockPage(),
+      selector: 'body',
+      selectorMap: {},
+      viewport: { width: 800, height: 600 },
+      config: { ...baseConfig, compareRetries: 1, compareRetryDelay: 10 },
+      scenario: baseScenario,
+      initialRefBuffer: bufA,
+      initialTestBuffer: bufB,
+      refBrowserOrContext: {},
+      testBrowserOrContext: {},
+      engineScriptsPath: '',
+      pixelmatchThreshold: 0.01
+    });
+
+    assert.strictEqual(strictResult.pass, false, 'Should fail with strict pixelmatch threshold');
   });
 
   it('should continue retrying when preparePage fails', async function () {

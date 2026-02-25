@@ -135,6 +135,9 @@ async function processCompareView (scenario, variantOrScenarioLabelSafe, scenari
   const maxNumDiffPixels = scenario.maxNumDiffPixels != null
     ? scenario.maxNumDiffPixels
     : (config.maxNumDiffPixels != null ? config.maxNumDiffPixels : 0);
+  const pixelmatchThreshold = scenario.liveComparePixelmatchThreshold != null
+    ? scenario.liveComparePixelmatchThreshold
+    : (config.liveComparePixelmatchThreshold != null ? config.liveComparePixelmatchThreshold : 0.1);
 
   for (let selectorIndex = 0; selectorIndex < selectors.length; selectorIndex++) {
     const selector = selectors[selectorIndex];
@@ -174,7 +177,7 @@ async function processCompareView (scenario, variantOrScenarioLabelSafe, scenari
     }
 
     // Inline pixelmatch comparison
-    const matchResult = compareBuffers(refBuffer, testBuffer, { threshold: 0.2 });
+    const matchResult = compareBuffers(refBuffer, testBuffer, { threshold: pixelmatchThreshold });
 
     if (matchResult.numDiffPixels <= maxNumDiffPixels) {
       // Pass — save both screenshots
@@ -205,7 +208,8 @@ async function processCompareView (scenario, variantOrScenarioLabelSafe, scenari
       initialTestBuffer: testBuffer,
       refBrowserOrContext,
       testBrowserOrContext,
-      engineScriptsPath
+      engineScriptsPath,
+      pixelmatchThreshold
     });
 
     // Save the best screenshots to disk

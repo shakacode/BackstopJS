@@ -3,13 +3,13 @@ const { compareBuffers, createCompositeImage } = require('./compare/pixelmatch-i
 const defaultPreparePage = require('./preparePage');
 const logger = require('./logger')('retryCompare');
 
-function tryMatchAgainstAll (newScreenshot, existingScreenshots, maxNumDiffPixels) {
+function tryMatchAgainstAll (newScreenshot, existingScreenshots, maxNumDiffPixels, pixelmatchThreshold) {
   let leastDiffPixels = Infinity;
   let bestResult = null;
   let bestIndex = -1;
 
   for (let i = 0; i < existingScreenshots.length; i++) {
-    const result = compareBuffers(newScreenshot, existingScreenshots[i], { threshold: 0.2 });
+    const result = compareBuffers(newScreenshot, existingScreenshots[i], { threshold: pixelmatchThreshold });
 
     if (result.numDiffPixels <= maxNumDiffPixels) {
       return { pass: true, matchIndex: i, result };
@@ -32,7 +32,8 @@ module.exports = async function retryCompare (options) {
     selector, selectorMap, viewport, config, scenario,
     initialRefBuffer, initialTestBuffer,
     refBrowserOrContext, testBrowserOrContext, engineScriptsPath,
-    preparePage: preparePageOverride
+    preparePage: preparePageOverride,
+    pixelmatchThreshold
   } = options;
 
   const preparePage = preparePageOverride || defaultPreparePage;
@@ -57,7 +58,7 @@ module.exports = async function retryCompare (options) {
   let overallBestDiffPng = null;
 
   // Initial comparison to track best diff
-  const initialResult = compareBuffers(initialRefBuffer, initialTestBuffer, { threshold: 0.2 });
+  const initialResult = compareBuffers(initialRefBuffer, initialTestBuffer, { threshold: pixelmatchThreshold });
   overallLeastDiff = initialResult.numDiffPixels;
   overallBestDiffPng = initialResult.diffPng;
 
@@ -103,7 +104,7 @@ module.exports = async function retryCompare (options) {
     if (newTestBuffer) {
       testScreenshots.push(newTestBuffer);
 
-      const testMatch = tryMatchAgainstAll(newTestBuffer, refScreenshots, maxNumDiffPixels);
+      const testMatch = tryMatchAgainstAll(newTestBuffer, refScreenshots, maxNumDiffPixels, pixelmatchThreshold);
       if (testMatch.pass) {
         logger.log(`Match found on retry ${retry + 1} (test vs reference[${testMatch.matchIndex}])`);
         return { pass: true, refBuffer: refScreenshots[testMatch.matchIndex], testBuffer: newTestBuffer };
@@ -123,7 +124,7 @@ module.exports = async function retryCompare (options) {
     if (newRefBuffer) {
       refScreenshots.push(newRefBuffer);
 
-      const refMatch = tryMatchAgainstAll(newRefBuffer, testScreenshots, maxNumDiffPixels);
+      const refMatch = tryMatchAgainstAll(newRefBuffer, testScreenshots, maxNumDiffPixels, pixelmatchThreshold);
       if (refMatch.pass) {
         logger.log(`Match found on retry ${retry + 1} (reference vs test[${refMatch.matchIndex}])`);
         return { pass: true, refBuffer: newRefBuffer, testBuffer: testScreenshots[refMatch.matchIndex] };
