@@ -99,7 +99,7 @@ describe('pixelmatch-inline', function () {
       const buf = fs.readFileSync(REF_IMG1);
       const png = PNG.sync.read(buf);
 
-      const resized = resizePng(png, png.height, png.width);
+      const resized = resizePng(png, png.width, png.height);
 
       assert.strictEqual(resized, png, 'Should return same PNG instance');
     });
@@ -110,7 +110,7 @@ describe('pixelmatch-inline', function () {
       const targetWidth = png.width + 20;
       const targetHeight = png.height + 20;
 
-      const resized = resizePng(png, targetHeight, targetWidth);
+      const resized = resizePng(png, targetWidth, targetHeight);
 
       assert.strictEqual(resized.width, targetWidth);
       assert.strictEqual(resized.height, targetHeight);
