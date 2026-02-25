@@ -118,7 +118,7 @@ describe('liveCompare command', function () {
 
     await freshLiveCompare.execute(config);
 
-    // The .finally() handler should call _openReport
+    // The .then() handler should call _openReport
     assert(executeCommandStub.calledWith('_openReport', config), 'Should call _openReport when openReport is true');
   });
 
