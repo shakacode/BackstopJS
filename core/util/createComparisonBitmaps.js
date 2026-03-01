@@ -17,13 +17,12 @@ function regexTest (string, search) {
 }
 
 function ensureViewportLabel (config) {
-  if (typeof config.viewports === 'object') {
-    config.viewports.forEach(function (viewport) {
-      if (!viewport.label) {
-        viewport.label = viewport.name;
-      }
-    });
-  }
+  if (!Array.isArray(config.viewports)) return;
+  config.viewports.forEach(function (viewport, index) {
+    if (!viewport.label) {
+      viewport.label = viewport.name || ('viewport_' + index);
+    }
+  });
 }
 
 function decorateConfigForCompare (config) {
